@@ -16,7 +16,7 @@ class AMQPConsumer
     private $logger;
 
     // MQ连接信息
-    private const HOST = '121.40.253.224';
+    private const HOST = 'xxx.xxx.xxx.xxx';
     private const PORT = 5672;
     private const USERNAME = 'wbfFUieAoR';
     private const PASSWORD = 'ctuXCKwyMK';
