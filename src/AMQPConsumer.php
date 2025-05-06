@@ -19,12 +19,13 @@ class AMQPConsumer
     private const HOST = 'xxx.xxx.xxx.xxx';
     private const PORT = 5672;
     private const USERNAME = 'wbfFUieAoR';
-    private const PASSWORD = 'ctuXCKwyMK';
+    private const PASSWORD = 'ctuXCKw***';
     private const QUEUE_NAME = 'queue_GPdMhwpisB';
 
     // 连接和通道
     private $connection;
     private $channel;
+    private $consumerTag; // 添加消费者标签属性
     
     /**
      * 构造函数
@@ -86,7 +87,7 @@ class AMQPConsumer
         };
         
         // 开始消费消息
-        $this->channel->basic_consume(
+        $this->consumerTag = $this->channel->basic_consume(
             self::QUEUE_NAME,
             '',
             false,
@@ -178,18 +179,55 @@ class AMQPConsumer
     }
     
     /**
+     * 取消消费者
+     */
+    public function cancelConsumer()
+    {
+        try {
+            if ($this->channel && $this->consumerTag) {
+                $this->logger->info('正在取消消费者...');
+                $this->channel->basic_cancel($this->consumerTag);
+                $this->logger->info('消费者已取消');
+            }
+            return true;
+        } catch (\Exception $e) {
+            $this->logger->warning('取消消费者时出错: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * 关闭连接
      */
     public function close()
     {
-        if ($this->channel) {
-            $this->channel->close();
+        try {
+            // 首先取消消费者
+            $this->cancelConsumer();
+            
+            // 关闭通道
+            if ($this->channel) {
+                try {
+                    $this->channel->close();
+                } catch (\Exception $e) {
+                    $this->logger->warning('关闭通道时出错: ' . $e->getMessage());
+                }
+                $this->channel = null;
+            }
+            
+            // 关闭连接
+            if ($this->connection) {
+                try {
+                    $this->connection->close();
+                } catch (\Exception $e) {
+                    $this->logger->warning('关闭连接时出错: ' . $e->getMessage());
+                }
+                $this->connection = null;
+            }
+            
+            $this->logger->info('AMQP连接已关闭');
+        } catch (\Exception $e) {
+            $this->logger->error('关闭AMQP连接时出错: ' . $e->getMessage());
         }
-        
-        if ($this->connection) {
-            $this->connection->close();
-        }
-        
-        $this->logger->info('AMQP连接已关闭');
     }
 } 
