@@ -19,7 +19,7 @@ class AMQPConsumer
     private const HOST = 'xxx.xxx.xxx.xxx';
     private const PORT = 5672;
     private const USERNAME = 'wbfFUieAoR';
-    private const PASSWORD = 'ctuXCKw***';
+    private const PASSWORD = 'ctuXCK****';
     private const QUEUE_NAME = 'queue_GPdMhwpisB';
 
     // 连接和通道
@@ -77,10 +77,37 @@ class AMQPConsumer
         
         // 设置回调函数
         $callback = function (AMQPMessage $message) {
+            // 获取消息体
             $originalMessage = $message->getBody();
             
+            // 检查消息体是否为二进制数据
+            $isBinary = false;
+            if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $originalMessage)) {
+                $isBinary = true;
+                $this->logger->info('检测到二进制消息内容');
+                // 将二进制数据转换为十六进制字符串以便于查看
+                $hexMessage = bin2hex($originalMessage);
+                $this->logger->info('二进制消息的十六进制表示: ' . $hexMessage);
+            }
+            
+            // 处理消息头
+            $headers = $message->get('application_headers');
+            $messageId = null;
+            $topic = null;
+            $generateTime = null;
+            
+            if ($headers) {
+                $messageId = isset($headers['messageId']) ? $headers['messageId'] : null;
+                $topic = isset($headers['topic']) ? $headers['topic'] : null;
+                $generateTime = isset($headers['generateTime']) ? $headers['generateTime'] : null;
+            }
+            
             $this->logger->info('------ 消息内容 ------');
-            $this->logger->info('接收到原始消息: ' . $originalMessage);
+            $this->logger->info('MessageId: ' . $messageId);
+            $this->logger->info('Topic: ' . $topic);
+            $this->logger->info('GenerateTime: ' . $generateTime);
+            $this->logger->info('消息类型: ' . ($isBinary ? '二进制' : '文本'));
+            $this->logger->info('接收到原始消息: ' . ($isBinary ? $hexMessage : $originalMessage));
             
             // 处理消息内容
             $this->processMessage($originalMessage);
